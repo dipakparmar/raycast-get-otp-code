@@ -1,5 +1,4 @@
-import { ActionPanel, List, Action, showToast, Toast, Image, Icon, Clipboard } from "@raycast/api";
-
+import { ActionPanel, List, Action, showToast, Toast, Clipboard } from "@raycast/api";
 import { useSqlSMS } from "./useSql";
 import { isPermissionError, PermissionErrorScreen } from "./errors";
 import { SMS } from "./types";
@@ -27,6 +26,7 @@ export default function Command() {
   function DetectOTP(sms: SMS) {
     // remove URLs from SMS
     let text = sms.text.replace(/\b((https?|ftp|file):\/\/|www\.)[-A-Z0-9+&@#/%?=~_|$!:,.;]*[A-Z0-9+&@#/%=~_|$]/i, "");
+    // let text = sms.text;
     let found = false;
     let code = "";
     const patterns = [
@@ -75,6 +75,7 @@ export default function Command() {
       }
       return { code, found };
     }
+    // console.log("No OTP code found");
     return { code: "", found: false };
   }
 
@@ -94,7 +95,7 @@ export default function Command() {
       showToast({
         style: Toast.Style.Success,
         title: "Success 🥳",
-        message: "Copied Code: " + code + " to your clipboard. 📋 ",
+        message: "Copied Code: " + code + " to your clipboard.",
       });
       Clipboard.copy(code || "");
     } else {
@@ -106,14 +107,6 @@ export default function Command() {
     }
   }
 
-  function iconBasedOnOTP(sms: SMS): Image.ImageLike {
-    const { found } = DetectOTP(sms);
-    if (found) {
-      return Icon.Key;
-    }
-    return Icon.StopFilled;
-  }
-
   const alreadyFound: { [key: string]: boolean | string } = {};
   const all_messages = sqlState.results || [];
   const sorted_messages = all_messages
@@ -121,23 +114,21 @@ export default function Command() {
       const foundInArr = alreadyFound[x.ROWID];
       if (!foundInArr) {
         const { code, found } = DetectOTP(x);
-        console.log(`${x.ROWID} - ${found} - ${code}`);
         alreadyFound[x.ROWID] = found;
-        alreadyFound[x.code] = code;
+        alreadyFound[x.ROWID + "code"] = code;
       }
       return !foundInArr;
     })
     .sort((a, b) => (a.message_date && b.message_date && a.message_date < b.message_date ? 1 : -1));
-
-  const message_only_with_code = sorted_messages.filter((x) => (alreadyFound[x.ROWID]));
+  const message_only_with_code = sorted_messages.filter((x) => alreadyFound[x.ROWID]);
 
   return (
     <List
       isLoading={sqlState.isLoading}
-      navigationTitle="Search SMS"
+      navigationTitle="Search Message"
       enableFiltering={true}
       searchBarPlaceholder="Search SMS text"
-      isShowingDetail
+      isShowingDetail={message_only_with_code.length > 0 ? true : false}
     >
       {message_only_with_code.length > 0 ? (
         message_only_with_code.map((sms) => (
@@ -147,7 +138,6 @@ export default function Command() {
             title={sms.text}
             accessories={[
               {
-                tooltip: sms.message_date,
                 date: new Date(sms.message_date),
               },
             ]}
@@ -159,7 +149,10 @@ export default function Command() {
                     <List.Item.Detail.Metadata.Label title="Sender" text={sms.sender} />
                     <List.Item.Detail.Metadata.Label title="Recieved Date" text={sms.message_date} />
                     <List.Item.Detail.Metadata.Label title="Read Status" text={sms.is_read == 1 ? "✅" : "📦"} />
-                    <List.Item.Detail.Metadata.Label title="Code" text={alreadyFound[sms.code].toString() || ""} />
+                    <List.Item.Detail.Metadata.Label
+                      title="Code"
+                      text={alreadyFound[sms.ROWID + "code"].toString() || ""}
+                    />
                   </List.Item.Detail.Metadata>
                 }
               />
@@ -167,27 +160,14 @@ export default function Command() {
             actions={
               <ActionPanel>
                 <Action title="📋 Copy OTP" onAction={() => CopyOTP(sms)} />
-                {/* <Action.Push title="Show Details" target={<Detail markdown={sms.text + "\n\n" + sms.is_read} />} /> */}
                 <Action title="📨 Mark Unread" onAction={() => MarkUnread(sms)} />
               </ActionPanel>
             }
           />
         ))
       ) : (
-        <List.EmptyView
-          title="No messages found with otp code in last 1 hour!"
-        />
+        <List.EmptyView title="No messages found with otp code in last 1 hour!" />
       )}
-
-      {/* <List.Item
-        icon="list-icon.png"
-        title="Greeting"
-        actions={
-          <ActionPanel>
-            <Action.Push title="Show Details" target={<Detail markdown="# Hey! 👋" />} />
-          </ActionPanel>
-        }
-      /> */}
     </List>
   );
 }
