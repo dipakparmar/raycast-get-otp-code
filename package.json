@@ -3,7 +3,7 @@
   "name": "get-otp-code",
   "title": "Get OTP Code from your Messages",
   "description": "Retrives the OTP from your SMS. ",
-  "icon": "command-icon.png",
+  "icon": "imessage_logo.png",
   "author": "dipakparmar",
   "license": "MIT",
   "commands": [
