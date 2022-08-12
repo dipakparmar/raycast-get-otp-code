@@ -3,7 +3,7 @@ Copied from https://github.com/raycast/extensions/blob/main/extensions/apple-not
 Original credits to @mathieudutour and @raycast
 */
 
-import { environment } from "@raycast/api";
+import { environment, getPreferenceValues } from "@raycast/api";
 import { readFile } from "fs/promises";
 import { resolve } from "path";
 import { homedir } from "os";
@@ -33,37 +33,37 @@ const useSql = <Result>(path: string, query: string) => {
   useEffect(() => {
     (async () => {
       if (!databaseRef.current) {
-        try {
-          databaseRef.current = await loadDatabase(path);
-        } catch (e) {
-          if (e instanceof Error && e.message.includes("operation not permitted")) {
-            setError(new PermissionError("You do not have permission to access the database."));
-          } else {
-            setError(e as Error);
-          }
-          return;
-        }
+try {
+  databaseRef.current = await loadDatabase(path);
+} catch (e) {
+  if (e instanceof Error && e.message.includes("operation not permitted")) {
+setError(new PermissionError("You do not have permission to access the database."));
+  } else {
+setError(e as Error);
+  }
+  return;
+}
       }
 
       try {
-        const newResults = new Array<Result>();
-        const statement = databaseRef.current.prepare(query);
-        while (statement.step()) {
-          newResults.push(statement.getAsObject() as unknown as Result);
-        }
+const newResults = new Array<Result>();
+const statement = databaseRef.current.prepare(query);
+while (statement.step()) {
+  newResults.push(statement.getAsObject() as unknown as Result);
+}
 
-        setResults(newResults);
+setResults(newResults);
 
-        statement.free();
+statement.free();
       } catch (e) {
-        console.error(e);
-        if (error instanceof Error && error.message.includes("operation not permitted")) {
-          setError(new PermissionError("You do not have permission to access the database."));
-        } else {
-          setError(e as Error);
-        }
+console.error(e);
+if (error instanceof Error && error.message.includes("operation not permitted")) {
+  setError(new PermissionError("You do not have permission to access the database."));
+} else {
+  setError(e as Error);
+}
       } finally {
-        setIsLoading(false);
+setIsLoading(false);
       }
     })();
   }, [path, query]);
@@ -78,6 +78,7 @@ const useSql = <Result>(path: string, query: string) => {
 };
 
 const SMS_DB = resolve(homedir() + "/Library/Messages/chat.db");
+const periodToLookInSms = getPreferenceValues().periodToLookInSms as number | 15;
 
 const smsesQuery = `
 select
@@ -109,11 +110,11 @@ and (
     or message.text glob '*[0-9][0-9][0-9][0-9][0-9][0-9][0-9]*'
     or message.text glob '*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*'
 )
-and datetime(message.date / 1000000000 + strftime('%s', '2001-01-01'), 'unixepoch', 'localtime') >= datetime('now', '-1 day', 'localtime')
+and datetime(message.date / 1000000000 + strftime('%s', '2001-01-01'), 'unixepoch', 'localtime')
+>= datetime('now', '-${periodToLookInSms} minutes', 'localtime')
 order by
 message.date desc
 limit 100
 `;
-
 
 export const useSqlSMS = () => useSql<SMS>(SMS_DB, smsesQuery);

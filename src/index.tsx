@@ -1,9 +1,10 @@
-import { ActionPanel, List, Action, showToast, Toast, Clipboard } from "@raycast/api";
+import { ActionPanel, List, Action, showToast, Toast, Clipboard, getPreferenceValues } from "@raycast/api";
 import { useSqlSMS } from "./useSql";
 import { isPermissionError, PermissionErrorScreen } from "./errors";
 import { SMS } from "./types";
 
 export default function Command() {
+  const preferences = getPreferenceValues();
   const sqlState = useSqlSMS();
 
   if (sqlState.error) {
@@ -166,7 +167,7 @@ export default function Command() {
           />
         ))
       ) : (
-        <List.EmptyView title="No messages found with otp code in last 1 hour!" />
+        <List.EmptyView title={`No messages found with otp code in last ${preferences.periodToLookInSms} minutes!`} />
       )}
     </List>
   );

@@ -11,7 +11,18 @@
       "name": "index",
       "title": "Get OTP Code",
       "description": "Gets the OTP from your Messages. ",
-      "mode": "view"
+      "mode": "view",
+      "preferences": [
+        {
+          "title": "Retrive messages from the past X minutes",
+          "name": "periodToLookInSms",
+          "type": "textfield",
+          "default": "15",
+          "description": "Look for code in your text messages from the past X minutes",
+          "placeholder": "15",
+          "required": true
+        }
+      ]
     }
   ],
   "dependencies": {
